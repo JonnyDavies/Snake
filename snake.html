@@ -1,0 +1,439 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>Snake</title>
+    <style>
+        canvas {
+            background: #f2f2f2;
+            border-style: solid;
+            border-width: 10px;
+            display: inline-block;
+            float: left;
+            margin-left: 11em;
+        }
+
+        .board {
+            display: inline-block;
+            font-weight: bold;
+            font-family: Arial;
+            font-size: 1.5em;
+        }
+
+        button {
+            background-color: black; /* Green */
+            border: none;
+            color: white !important;
+            padding: 15px 32px;
+            text-align: center;
+            width: 150px;
+            text-decoration: none;
+            display: inline-block;
+            font-size: 16px;
+            margin-top: 0.1em;
+        }
+
+        .score {
+            margin-left: 18em;
+        }
+
+        #scoreNumber {
+            padding-left: 1em;
+            display: inline-block;
+            padding-right: 1em;
+        }
+
+        #highScoreNumber {
+            padding-left: 0.2em;
+            display: inline-block;
+        }
+
+        #scoreLabel {
+            padding-left: 1em;
+            display: inline-block;
+        }
+
+        #highScoreLabel {
+            display: inline-block;
+            padding-left: 1em;
+        }
+
+        .play {
+            margin-left: 6.5em;
+        }
+
+        #instruct {
+            padding-top: 1em;
+            padding-left: 1em;
+        }
+
+    </style>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="http://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css">
+    <link href="https://fonts.googleapis.com/css?family=Roboto" rel="stylesheet">
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.12.4/jquery.min.js"></script>
+    <script src="http://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js"></script>
+</head>
+<body>
+
+<div class="container">
+    <div class="row">
+        <div id="post" class="container">
+            <div class="row">
+                <div class="col-lg-12">
+                    <h1 id="postHeading">Snake</h1>
+                    <div class="board">
+                        <canvas id="canvas" height="239" width="494"></canvas>
+                        <label id="scoreLabel"> Score :
+                            <div id="scoreNumber"></div>
+                        </label>
+                        <label id="highScoreLabel"> High Score :
+                            <div id="highScoreNumber"></div>
+                        </label>
+                        <label id="instruct"> Move: <span class="glyphicon glyphicon-arrow-left"></span>, <span
+                                class="glyphicon glyphicon-arrow-right"></span>,
+                            <span class="glyphicon glyphicon-arrow-up"></span>, <span
+                                    class="glyphicon glyphicon-arrow-down"></span></label>
+                    </div>
+                    <div class="score">
+                        <button class="play">Resume</button>
+                        <button class="pause">Pause</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+</body>
+<script src="lazy_load/jquery.min.js" type="text/javascript" charset="utf-8"></script>
+<script type="text/javascript" charset="utf-8">
+
+
+    var canvas = document.getElementById("canvas");
+    var ctx = canvas.getContext("2d");
+    var upPressed, leftPressed, rightPressed, downPressed;
+    var currentDirection = "right";
+    var size = 10;
+    var snake = [
+        {"x": 92, "y": 2, "pos": "r"},
+        {"x": 77, "y": 2, "pos": "r"},
+        {"x": 62, "y": 2, "pos": "r"},
+        {"x": 47, "y": 2, "pos": "r"},
+        {"x": 32, "y": 2, "pos": "r"},
+        {"x": 17, "y": 2, "pos": "r"}
+    ];
+
+    var start = true;
+    var snakeHungry = true;
+    var gameOver = false;
+    var fx = 250;
+    var fy = 175;
+    var food = {"fx": 0, "fy": 0};
+    var landscape = [1, 1, 1, 1, 1];
+    var adjust = false;
+    var foodX = [2, 17, 32, 47, 62, 77, 92, 107, 122, 137, 152, 167, 182, 197, 212, 227, 242, 257, 272, 287, 302, 317, 332, 347, 362, 377, 392, 407, 422, 437, 452, 467, 482];
+    var foodY = [2, 17, 32, 47, 62, 77, 92, 107, 122, 137, 152, 167, 182, 197, 212, 227];
+    var score = 0;
+    var highScore = parseInt(localStorage.getItem("highScore"));
+    if (!highScore) {
+        highScore = 0;
+    }
+    var oneKeyPressPerFrame;
+    var isPaused;
+
+    document.getElementById('scoreNumber').innerHTML = score.toString();
+    document.getElementById('highScoreNumber').innerHTML = highScore.toString();
+
+    function directTheSnake(direction) {
+
+        switch (direction) {
+            case "left":
+                currentDirection = direction;
+                break;
+            case "right":
+                currentDirection = direction;
+                break;
+            case "up":
+                currentDirection = direction;
+                break;
+            case "down":
+                currentDirection = direction;
+                break;
+            default :
+                break;
+        }
+    }
+
+    function moveTheSnake(coord) {
+        switch (currentDirection) {
+            case "left":
+                coord.x -= 15;
+                break;
+            case "right":
+                coord.x += 15;
+                break;
+            case "up":
+                coord.y -= 15;
+                break;
+            case "down":
+                coord.y += 15;
+                break;
+            default :
+                break;
+        }
+
+        return coord;
+    }
+
+    function drawFood(x, y) {
+        ctx.beginPath();
+        ctx.rect(x, y, 10, 10);
+        ctx.fillStyle = "black";
+        ctx.fill();
+        ctx.closePath();
+    }
+
+    function getRandomInt(min, max) {
+        return Math.floor(Math.random() * (max - min)) + min;
+    }
+
+    function moveSnake() {
+        var x, y;
+        var coord = {"x": 0, "y": 0, "pos": 0};
+
+        for (var s in snake) {
+            coord = snake[s];
+            x = coord.x;
+            y = coord.y;
+            ctx.beginPath();
+            ctx.rect(x, y, 10, 10);
+            // ctx.stroke();
+            ctx.fillStyle = "black";
+            ctx.fill();
+            ctx.closePath();
+
+            if (s != snake.length - 1) {
+                if (snake[s].pos === "r") {
+                    fillGapOfSnakeHorizontalRight(snake[s].x, snake[s].y);
+                }
+                else if (snake[s].pos === "l") {
+                    fillGapOfSnakeHorizontalLeft(snake[s].x, snake[s].y);
+                }
+                else if (snake[s].pos === "u") {
+                    fillGapOfSnakeVerticalUp(snake[s].x, snake[s].y);
+                }
+                else {
+                    fillGapOfSnakeVerticalDown(snake[s].x, snake[s].y);
+                }
+            }
+        }
+    }
+
+    function fillGapOfSnakeHorizontalRight(x, y) {
+        ctx.beginPath();
+        ctx.rect(x - 5, y, 5, 10); // 5, 10 stay same
+        ctx.fillStyle = "black";
+        ctx.fill();
+        ctx.closePath();
+    }
+
+    function fillGapOfSnakeHorizontalLeft(x, y) {
+        ctx.beginPath();
+        ctx.rect(x + 10, y, 5, 10); // 5, 10 stay same
+        ctx.fillStyle = "black";
+        ctx.fill();
+        ctx.closePath();
+    }
+
+
+    function fillGapOfSnakeVerticalDown(x, y) {
+        ctx.beginPath();
+        ctx.rect(x, y - 5, 10, 5); // 10, 5 stay same
+        ctx.fillStyle = "black";
+        ctx.fill();
+        ctx.closePath();
+    }
+
+    function fillGapOfSnakeVerticalUp(x, y) {
+        ctx.beginPath();
+        ctx.rect(x, y + 10, 10, 5); // 10, 5 stay same
+        ctx.fillStyle = "black";
+        ctx.fill();
+        ctx.closePath();
+    }
+
+    function draw() {
+        oneKeyPressPerFrame = true;
+        var snakeHead = snake[0];
+
+        if (start) {
+            moveSnake();
+            start = false;
+            snake.pop();
+        }
+        else {
+            var coord = {"x": 0, "y": 0, "pos": 0};
+            ctx.clearRect(0, 0, 500, 250);
+            x = snake[0].x;
+            y = snake[0].y;
+            coord.x = x;
+            coord.y = y;
+
+            if (currentDirection === "left") {
+                coord.pos = "l";
+            }
+            if (currentDirection === "right") {
+                coord.pos = "r";
+            }
+            if (currentDirection === "up") {
+                coord.pos = "u";
+            }
+            if (currentDirection === "down") {
+                coord.pos = "d";
+            }
+
+            coord = moveTheSnake(coord);
+
+            for (var b in snake) {
+                if (coord.x === snake[b].x && coord.y === snake[b].y) {
+                    gameOver = true;
+                }
+            }
+
+            if (coord.x < 2 || coord.x > 482 || coord.y < 2 || coord.y > 227) {
+                gameOver = true;
+            }
+
+            if (gameOver) {
+                moveSnake();
+                var result = confirm("Gameover! Try again?");
+
+                if (result == true) {
+                    highScore = parseInt(localStorage.getItem("highScore"));
+                    if (highScore < score || !highScore) {
+                        localStorage.setItem("highScore", score.toString());
+                    }
+                    document.location.reload(true);
+                }
+                else {
+                    isPaused = true;
+                }
+            }
+            else {
+                snake.pop();
+            }
+
+            snake.unshift(coord);
+            moveSnake();
+        }
+
+        if (snakeHead.x === food.fx && snakeHead.y === food.fy) {
+            snakeHungry = true;
+            score += 10;
+            document.getElementById('scoreNumber').innerHTML = score.toString();
+        }
+
+
+        if (snakeHungry) {
+            var validFood = false;
+            snakeHungry = false;
+
+            while (!validFood) {
+                validFood = true;
+                food.fx = foodX[getRandomInt(0, foodX.length - 1)];
+                food.fy = foodY[getRandomInt(0, foodY.length - 1)];
+
+                for (var b in snake) {
+                    if (food.fx === snake[b].x && food.fy === snake[b].y) {
+                        validFood = false;
+                    }
+                }
+            }
+            var addBlock = snake[snake.length - 1];
+            snake.push(addBlock);
+        }
+        drawFood(food.fx, food.fy);
+    }
+
+    function keyUpHandler(e) {
+        if (e.keyCode == 39) {
+            rightPressed = false;
+        }
+        else if (e.keyCode == 37) {
+            leftPressed = false;
+        }
+        else if (e.keyCode == 40) {
+            downPressed = false;
+        }
+        else if (e.keyCode == 38) {
+            upPressed = false;
+        }
+    }
+
+    function keyDownHandler(e) {
+        if (oneKeyPressPerFrame) {
+
+            oneKeyPressPerFrame = false;
+
+            if (e.keyCode == 39) {
+                rightPressed = true;
+                if (rightPressed) {
+                    if (currentDirection === "up" || currentDirection === "down") {
+                        directTheSnake("right");
+                    }
+                }
+            }
+            else if (e.keyCode == 37) {
+                leftPressed = true;
+                if (leftPressed) {
+                    if (currentDirection === "up" || currentDirection === "down") {
+                        directTheSnake("left");
+                    }
+                }
+            }
+            else if (e.keyCode == 40) {
+                downPressed = true;
+                if (downPressed) {
+                    if (currentDirection === "right" || currentDirection === "left") {
+                        directTheSnake("down");
+                    }
+                }
+            }
+            else if (e.keyCode == 38) {
+                upPressed = true;
+                if (upPressed) {
+                    if (currentDirection === "right" || currentDirection === "left") {
+                        directTheSnake("up");
+                    }
+                }
+            }
+        }
+    }
+
+    document.addEventListener("keydown", keyDownHandler, false);
+    document.addEventListener("keyup", keyUpHandler, false);
+
+    setInterval(function () {
+        if (!isPaused) {
+            draw();
+        }
+    }, 130);
+
+    $(document).ready(function () {
+        $('.pause').on('click', function (e) {
+            e.preventDefault();
+            isPaused = true;
+        });
+
+        $('.play').on('click', function (e) {
+            e.preventDefault();
+            isPaused = false;
+        });
+    });
+</script>
+</html>
+
+
+
+
+
